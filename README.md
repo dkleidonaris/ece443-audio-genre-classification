@@ -1,128 +1,163 @@
-# ECE443 Audio Genre Classification
+# ECE443 Audio Genre Classification (GMM)
 
-Music genre classification using statistical audio features and **Gaussian Mixture Models (GMMs)**.
+Music genre classification using **MFCC** features and **Gaussian Mixture Models (GMMs)**.
 
-This project was developed as part of the **ECE443** (Voice and Sound Recognition) course and focuses on supervised classification of music genres from audio signals.
+This project was developed for the **ECE443 (Voice and Sound Recognition)** course and implements a classic statistical pattern-recognition pipeline for supervised classification of music genres.
 
 ---
 
 ## 📌 Project Overview
 
-The goal of this project is to automatically classify music tracks into genres based on extracted audio features. The approach follows a **statistical pattern recognition pipeline**:
-
-1. Audio loading and preprocessing
-2. Feature extraction (e.g. MFCCs)
-3. Feature normalization
-4. Genre modeling using **Gaussian Mixture Models (GMMs)**
-5. Evaluation on a held-out test set
+### Pipeline
+1. Load audio signals (`.wav`)
+2. Extract frame-level features (MFCC)
+3. Standardize features with `StandardScaler`
+4. Train one **GMM per genre**
+5. Classify tracks by **maximum log-likelihood** across genre models
+6. Evaluate with accuracy + confusion matrix
 
 ---
 
 ## 📂 Datasets
 
-This project supports **two alternative datasets**. The user can select which dataset to use by setting a parameter in the notebook.
+This notebook supports **two datasets** and can run **one or both** in a single execution.
 
-### 1️⃣ Default Dataset (Instructor-provided)
-
-This is the **default dataset provided by the course instructor**, intended mainly for testing and benchmarking.
-
-* Hosted on **Kaggle**
-* Downloaded automatically using `kagglehub`
-* Fixed train / test split
-
-**Structure:**
+### 1) Default Dataset (course/instructor-provided)
+- Downloaded automatically from Kaggle using `kagglehub`
+- Stored locally under: `data-default/`
+- Expected structure:
 
 ```
-train/
-  ├── blues/
-  ├── rock/
-  └── ...
-
-test/
-  ├── blues/
-  ├── rock/
-  └── ...
+data-default/
+  train/
+    blues/  *.wav
+    ...
+  test/
+    blues/  *.wav
+    ...
 ```
 
-Each genre folder contains `.wav` audio files.
+### 2) GTZAN Dataset
+- Downloaded automatically from Kaggle using `kagglehub`
+- The original Kaggle dataset is split into a local train/test structure under: `data-gtzan/`
+- Train/test split is controlled by `GTZAN_TRAIN_RATIO` (seed fixed to 42 for reproducibility)
 
-### 2️⃣ GTZAN Dataset
+```
+data-gtzan/
+  train/
+    blues/  *.wav
+    ...
+  test/
+    blues/  *.wav
+    ...
+```
 
-The well-known **GTZAN music genre dataset** can also be used.
-
-* Downloaded automatically
-* Split into training and test sets
-* Train/test split ratio is configurable
+> Note: the split code **copies** files into `data-gtzan/train` and `data-gtzan/test` (it does not modify the downloaded source). If you re-run the split with different settings, delete `data-gtzan/` first to avoid leftover files from older runs.
 
 ---
 
-### 🔧 Dataset Selection
+## 🔧 Notebook Parameters
 
-Dataset selection is controlled by the following parameters in the notebook:
+In `project.ipynb`, you control the experiments via these parameters:
 
 ```python
-DATASET = "default"  # "default" or "gtzan"
+DATASETS_FETCH = True          # download/copy datasets (run once, then set False)
+RUN_DATASETS = ["default", "gtzan"]  # run one or both
 
-DEFAULT_FETCH = True
-GTZAN_FETCH = False
-GTZAN_TRAIN_RATIO = 0.8
+GTZAN_TRAIN_RATIO = 0.8        # only affects GTZAN split
+
+BUILD_FEATURES = True          # extract MFCC features into .npz
+TRAIN = True                   # train GMM models
+Ks = [2, 4, 8, 16, 32]         # number of mixture components
 ```
 
-Only one dataset is active at a time.
+Typical usage:
+- **First run**: `DATASETS_FETCH=True`, `BUILD_FEATURES=True`, `TRAIN=True`
+- **Later runs** (same data/features): `DATASETS_FETCH=False`, `BUILD_FEATURES=False`, `TRAIN=True` (or `TRAIN=False` if you only want to re-plot / re-evaluate)
 
 ---
 
-## 🧠 Methodology
+## 📁 Features, Models, and Results (where files go)
 
-* Audio loading with `librosa`
-* Feature extraction (MFCCs, statistics over frames)
-* Feature standardization using `StandardScaler`
-* Genre-wise GMM training
-* Classification via maximum likelihood
+For each dataset, the notebook creates **dataset-specific** outputs.
+
+### Features
+Saved under each dataset directory:
+
+```
+<DATA_DIR>/features/
+  train/<genre>/*.npz
+  test/<genre>/*.npz
+```
+
+### Models
+Saved under each dataset directory:
+
+```
+<DATA_DIR>/models/
+  scaler.joblib
+  gmm_<genre>_K<K>.joblib
+```
+
+### Results (report-ready)
+Saved under:
+
+```
+results/<dataset_name>/
+  accuracy_overall.csv
+  accuracy_per_genre.csv
+  accuracy_vs_K.png
+  accuracy_per_K.png
+  per_genre_grouped_by_K.png
+  cm_K2.png
+  cm_K4.png
+  ...
+```
+
+Confusion matrices are saved **with counts printed in each cell**.
 
 ---
 
 ## 🛠️ Installation
 
-### 1️⃣ Create Conda environment
-
+### Option A: Using Conda
 ```bash
 conda create -n ece443 python=3.10
 conda activate ece443
-```
-
-### 2️⃣ Install dependencies
-
-```bash
 pip install -r requirements.txt
 ```
+
+### Option B: Plain pip
+```bash
+pip install numpy pandas matplotlib librosa soundfile scipy scikit-learn tqdm joblib kagglehub
+```
+
+> Kaggle downloads via `kagglehub` require Kaggle authentication configured on your machine.
 
 ---
 
 ## ▶️ Running the project
 
-Typical workflow:
-
-1. Download dataset from Kaggle
-2. Copy dataset into `data/`
-3. Train GMM models
-4. Evaluate on test set
-5. Visualize results (confusion matrices, accuracy per genre)
+1. Open `project.ipynb`
+2. Set parameters (datasets, `Ks`, training flags)
+3. Run all cells
 
 ---
 
 ## 📊 Evaluation
 
-* Overall classification accuracy
-* Confusion matrix per experiment
-* Per-genre performance analysis
+The notebook reports and saves:
+- Overall accuracy per `K`
+- Confusion matrix per `K` (with counts)
+- Per-genre accuracy tables
+- Grouped bar plots: **per-genre accuracy for each K**
 
 ---
 
 ## 👥 Authors
 
-* [Dimitris Kleidonaris](https://github.com/dkleidonaris)
-* [Nikolaos-Panagiotis Rinos](https://github.com/NRinos)
+- [Dimitris Kleidonaris](https://github.com/dkleidonaris)
+- [Nikolaos-Panagiotis Rinos](https://github.com/NRinos)
 
 ---
 
